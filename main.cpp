@@ -37,8 +37,9 @@ void loop(void)
 void receiveEvent (int size)
 {
 	uint8_t rBuffer[BUFFER_LENGTH];
+	bool hasStartFlag = false;
+	bool hasEndFlag = false;
 	int idx = 0;
-
 
 	if (Wire.available() > 1)
 	{
@@ -46,6 +47,7 @@ void receiveEvent (int size)
 
 		// Determine if the first byte is the start flag.
 		if (ch == START_FLAG) {
+			hasStartFlag = true;
 			while (Wire.available() > 1)
 			{
 				rBuffer[idx] = Wire.read();
