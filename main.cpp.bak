@@ -1,0 +1,132 @@
+/*
+ * main.cpp
+ *
+ *  Created on: Aug 18, 2015
+ *      Author: Anthony
+ */
+#include "arduino.h"
+#include "Wire.h"
+#include "DHT.h"
+
+#define DHTPIN 2     // what pin we're connected to
+#define DHTTYPE DHT11   // DHT 11
+DHT dht(DHTPIN, DHTTYPE);
+
+const int SLAVE_ADDRESS(0x40);
+
+enum DataFrameFlags {
+	START_FLAG=0x12,
+	END_FLAG=0x13,
+	CMD_FLAG=0x14,
+	ESC_FLAG=0x7D
+};
+
+void receiveEvent (int size);
+
+void setup(void)
+{
+    pinMode(13, OUTPUT);
+    Wire.begin(SLAVE_ADDRESS);
+    Serial.begin(9600);
+    Serial.println("Awaiting for serial data - 1.0");
+    Wire.onReceive(receiveEvent);
+    dht.begin();
+}
+
+void loop(void)
+{
+	  // Wait a few seconds between measurements.
+	  delay(2000);
+
+	  // Reading temperature or humidity takes about 250 milliseconds!
+	  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+	  float h = dht.readHumidity();
+	  // Read temperature as Celsius (the default)
+	  float t = dht.readTemperature();
+	  // Read temperature as Fahrenheit (isFahrenheit = true)
+	  float f = dht.readTemperature(true);
+
+	  // Check if any reads failed and exit early (to try again).
+	  if (isnan(h) || isnan(t) || isnan(f)) {
+	    Serial.println("Failed to read from DHT sensor!");
+	    return;
+	  }
+
+	  // Compute heat index in Fahrenheit (the default)
+	  float hif = dht.computeHeatIndex(f, h);
+	  // Compute heat index in Celsius (isFahreheit = false)
+	  float hic = dht.computeHeatIndex(t, h, false);
+
+}
+
+void receiveEvent (int size)
+{
+	uint8_t rxDataBuffer[BUFFER_LENGTH];
+//	uint8_t rsCmdBuffer[2];
+//	bool hasStartFlag = false;
+//	bool hasEndFlag = false;
+	int idx = 0;
+
+	Serial.println(" ");
+	Serial.print("Receive event invoked. Size ") + Serial.println(size);
+
+	while (1 < Wire.available()) // loop through all but the last
+	{
+		rxDataBuffer[idx] = Wire.read(); // receive byte as a character
+		Serial.print(rxDataBuffer[idx]);
+		idx++;// print the character
+	}
+	int x = Wire.read();    // receive byte as an integer
+	Serial.println(x);
+
+	if(rxDataBuffer[1] == 0x41){
+		Serial.println("Command: Temperature.");
+
+		float h = dht.readHumidity();
+		float t = dht.readTemperature();
+		float hic = dht.computeHeatIndex(t, h, false);
+
+		Wire.write("12.12");
+	}
+}
+
+//		uint8_t ch = Wire.read();
+//
+//		switch (ch)
+//		{
+//			case START_FLAG: // If the start byte is found, continue to read the data frame
+//				hasStartFlag = true;
+//				break;
+//			case END_FLAG:
+//				hasEndFlag = true; // The data frame will be valid if end byte is found.
+//				break;
+//			case CMD_FLAG: // Get the command flag.
+//				rsCmdBuffer[0] = Wire.read();
+//				rsCmdBuffer[1] = Wire.read();
+//				break;
+//			default: // Data Frame
+//				if (hasStartFlag)
+//				{
+//					while (Wire.available() > 1)
+//					{
+//						rxDataBuffer[idx] = Wire.read();
+//						idx++;
+//					}
+//				}
+//				break;
+//		}
+//	}
+//
+//	Serial.println("Command");
+//	for (uint8_t idx=0; idx < sizeof(rsCmdBuffer); idx++);
+//	{
+//		Serial.print(rsCmdBuffer[idx]);
+//	}
+//	Serial.println(" ");
+//
+//	Serial.println("Data buffer");
+//	for (uint8_t idx=0; idx < sizeof(rxDataBuffer); idx++);
+//	{
+//		Serial.print(rxDataBuffer[idx]);
+//	}
+//	Serial.println(" ");

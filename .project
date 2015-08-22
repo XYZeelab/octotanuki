@@ -27,6 +27,11 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>Ethernet</name>
+			<type>2</type>
+			<locationURI>ArduinoPath/libraries/Ethernet/src</locationURI>
+		</link>
+		<link>
 			<name>Wire</name>
 			<type>2</type>
 			<locationURI>ArduinoPath/hardware/arduino/avr/libraries/Wire</locationURI>
