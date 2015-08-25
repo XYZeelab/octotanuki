@@ -1,0 +1,7 @@
+
+message SensorData {
+	required int32 SensorId = 1;
+	required int32 Command = 2;
+	required string Key = 3;
+	required string Value = 4;
+}

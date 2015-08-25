@@ -1,29 +1,27 @@
-/*
-  Web Server
-
- A simple web server that shows the value of the analog input pins.
- using an Arduino Wiznet Ethernet shield.
-
- Circuit:
- * Ethernet shield attached to pins 10, 11, 12, 13
- * Analog inputs attached to pins A0 through A5 (optional)
-
- created 18 Dec 2009
- by David A. Mellis
- modified 9 Apr 2012
- by Tom Igoe
-
- */
-
-#include <SPI.h>
+#include "SPI.h"
 #include "Ethernet.h"
+#include "DHT.h"
+
+#include "Thread.h"
+#include "ThreadController.h"
+
+#include "pb_encode.h"
+#include "pb_decode.h"
+#include "sensordata.pb.h"
+
+#define DHTPIN 2
+#define DHTTYPE DHT11   // DHT 11
+
+DHT dht(DHTPIN, DHTTYPE);
+
+float GetTemperature(bool isFahrenheit);
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
 byte mac[] = {
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
 };
-IPAddress ip(192, 168, 1, 177);
+IPAddress ip(192, 168, 11, 16);
 
 // Initialize the Ethernet server library
 // with the IP address and port you want to use
@@ -67,18 +65,9 @@ void loop() {
           client.println("Connection: close");  // the connection will be closed after completion of the response
           client.println("Refresh: 5");  // refresh the page automatically every 5 sec
           client.println();
-          client.println("<!DOCTYPE HTML>");
-          client.println("<html>");
-          // output the value of each analog input pin
-          for (int analogChannel = 0; analogChannel < 6; analogChannel++) {
-            int sensorReading = analogRead(analogChannel);
-            client.print("analog input ");
-            client.print(analogChannel);
-            client.print(" is ");
-            client.print(sensorReading);
-            client.println("<br />");
-          }
-          client.println("</html>");
+          float temp = GetTemperature(false);
+
+          client.print("<Temperature>") + client.print(temp) + client.println("</Temperature>");
           break;
         }
         if (c == '\n') {
@@ -97,4 +86,64 @@ void loop() {
     client.stop();
     Serial.println("client disconnected");
   }
+}
+
+float GetHumidity()
+{
+	float h = dht.readHumidity();
+
+	if (isnan(h)) {
+		  Serial.println("Failed to read from DHT sensor!");
+		  return 0.0f;
+	}
+	delay(500);
+
+	return h;
+}
+
+float GetTemperature(bool isFahrenheit)
+{
+	float t;
+
+	if (isFahrenheit)
+	{
+		// Read temperature as Fahrenheit (isFahrenheit = true)
+		t = dht.readTemperature(isFahrenheit);
+	} else {
+		// Read temperature as Celsius (the default)
+		t = dht.readTemperature(isFahrenheit);
+	}
+
+	// Check if any reads failed and exit early (to try again).
+	if (isnan(t)) {
+		Serial.println("Failed to read from DHT sensor!");
+		return 0.0f;
+	}
+
+	return t;
+}
+
+float GetHeatIndex(bool isFahrenheit)
+{
+	  // Reading temperature or humidity takes about 250 milliseconds!
+	  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+	  float h = dht.readHumidity();
+	  // Read temperature as Celsius (the default)
+	  float t = dht.readTemperature();
+	  // Read temperature as Fahrenheit (isFahrenheit = true)
+	  float f = dht.readTemperature(true);
+
+	  // Check if any reads failed and exit early (to try again).
+	  if (isnan(h) || isnan(t) || isnan(f)) {
+	    Serial.println("Failed to read from DHT sensor!");
+	    return 0.0f;
+	  }
+
+	  // Compute heat index in Fahrenheit (the default)
+	  float hif = dht.computeHeatIndex(f, h);
+	  // Compute heat index in Celsius (isFahreheit = false)
+	  float hic = dht.computeHeatIndex(t, h, false);
+	delay(500);
+
+	return t;
 }

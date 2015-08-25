@@ -27,16 +27,6 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>Ethernet</name>
-			<type>2</type>
-			<locationURI>ArduinoPath/libraries/Ethernet/src</locationURI>
-		</link>
-		<link>
-			<name>Wire</name>
-			<type>2</type>
-			<locationURI>ArduinoPath/hardware/arduino/avr/libraries/Wire</locationURI>
-		</link>
-		<link>
 			<name>arduino</name>
 			<type>2</type>
 			<locationURI>ArduinoPath/hardware/arduino/avr/cores/arduino</locationURI>
@@ -45,6 +35,16 @@
 			<name>standard</name>
 			<type>2</type>
 			<locationURI>ArduinoPath/hardware/arduino/avr/variants/standard</locationURI>
+		</link>
+		<link>
+			<name>libraries/Ethernet</name>
+			<type>2</type>
+			<locationURI>ArduinoPath/libraries/Ethernet/src</locationURI>
+		</link>
+		<link>
+			<name>libraries/Wire</name>
+			<type>2</type>
+			<locationURI>ArduinoPath/hardware/arduino/avr/libraries/Wire</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>
