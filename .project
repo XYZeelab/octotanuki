@@ -42,6 +42,11 @@
 			<locationURI>ArduinoPath/libraries/Ethernet/src</locationURI>
 		</link>
 		<link>
+			<name>libraries/SPI</name>
+			<type>2</type>
+			<location>C:/Arduino/hardware/arduino/avr/libraries/SPI</location>
+		</link>
+		<link>
 			<name>libraries/Wire</name>
 			<type>2</type>
 			<locationURI>ArduinoPath/hardware/arduino/avr/libraries/Wire</locationURI>

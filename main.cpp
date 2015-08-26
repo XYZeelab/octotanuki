@@ -1,149 +1,102 @@
-#include "SPI.h"
-#include "Ethernet.h"
-#include "DHT.h"
+#include <Thread.h>
+#include <ThreadController.h>
 
-#include "Thread.h"
-#include "ThreadController.h"
+/*
+	This example, requires a Timer Interrupt Library.
+	If you are using Arduino NANO, UNO... (with ATmega168/328)
+		Please go to: http://playground.arduino.cc/code/timer1
+	If you are using Arduino DUE,
+		Please go to: https://github.com/ivanseidel/DueTimer
 
-#include "pb_encode.h"
-#include "pb_decode.h"
-#include "sensordata.pb.h"
+	Include the library corresponding to your Arduino.
+*/
+// #include <DueTimer.h>
+#include <TimerOne.h>
 
-#define DHTPIN 2
-#define DHTTYPE DHT11   // DHT 11
+// ThreadController that will controll all threads
+ThreadController controll = ThreadController();
 
-DHT dht(DHTPIN, DHTTYPE);
+//My Thread
+Thread myThread = Thread();
+//His Thread
+Thread hisThread = Thread();
 
-float GetTemperature(bool isFahrenheit);
-
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network:
-byte mac[] = {
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
-};
-IPAddress ip(192, 168, 11, 16);
-
-// Initialize the Ethernet server library
-// with the IP address and port you want to use
-// (port 80 is default for HTTP):
-EthernetServer server(80);
-
-void setup() {
-  // Open serial communications and wait for port to open:
-  Serial.begin(9600);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for Leonardo only
-  }
-
-
-  // start the Ethernet connection and the server:
-  Ethernet.begin(mac, ip);
-  server.begin();
-  Serial.print("server is at ");
-  Serial.println(Ethernet.localIP());
+// callback for myThread
+void myThreadCallback(){
+	Serial.println("myThread\t\tcallback");
 }
 
-
-void loop() {
-  // listen for incoming clients
-  EthernetClient client = server.available();
-  if (client) {
-    Serial.println("new client");
-    // an http request ends with a blank line
-    boolean currentLineIsBlank = true;
-    while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        Serial.write(c);
-        // if you've gotten to the end of the line (received a newline
-        // character) and the line is blank, the http request has ended,
-        // so you can send a reply
-        if (c == '\n' && currentLineIsBlank) {
-          // send a standard http response header
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connection: close");  // the connection will be closed after completion of the response
-          client.println("Refresh: 5");  // refresh the page automatically every 5 sec
-          client.println();
-          float temp = GetTemperature(false);
-
-          client.print("<Temperature>") + client.print(temp) + client.println("</Temperature>");
-          break;
-        }
-        if (c == '\n') {
-          // you're starting a new line
-          currentLineIsBlank = true;
-        }
-        else if (c != '\r') {
-          // you've gotten a character on the current line
-          currentLineIsBlank = false;
-        }
-      }
-    }
-    // give the web browser time to receive the data
-    delay(1);
-    // close the connection:
-    client.stop();
-    Serial.println("client disconnected");
-  }
+// callback for hisThread
+void hisThreadCallback(){
+	Serial.println("\thisThread\tcallback");
 }
 
-float GetHumidity()
-{
-	float h = dht.readHumidity();
+// This is the callback for the Timer
+void timerCallback(){
+	controll.run();
+}
 
-	if (isnan(h)) {
-		  Serial.println("Failed to read from DHT sensor!");
-		  return 0.0f;
+void setup(){
+	Serial.begin(9600);
+
+	// Configure myThread
+	myThread.onRun(myThreadCallback);
+	myThread.setInterval(500);
+
+	// Configure myThread
+	hisThread.onRun(hisThreadCallback);
+	hisThread.setInterval(200);
+
+	// Adds both threads to the controller
+	controll.add(&myThread); // & to pass the pointer to it
+	controll.add(&hisThread);
+
+	/*
+		If using DueTimer...
+	*/
+	// Timer1.attachInterrupt(timerCallback).start(20000);
+
+	/*
+		If using TimerOne...
+	*/
+
+	 Timer1.initialize(20000);
+	 Timer1.attachInterrupt(timerCallback);
+	 Timer1.start();
+
+}
+
+void waitSerial(){
+	while (!Serial.available());
+	delay(10);
+    while (Serial.available() && Serial.read());
+}
+
+void loop(){
+	while(1){
+		noInterrupts();	// Call to disable interrupts
+		Serial.println("Type anything to stop myThread!");
+		interrupts();	// Call to enable interrupts
+		waitSerial();
+		myThread.enabled = false;
+
+		noInterrupts();
+		Serial.println("Type anything to stop hisThread!");
+		interrupts();
+		waitSerial();
+		hisThread.enabled = false;
+
+		noInterrupts();
+		Serial.println("Type anything to enable myThread!");
+		interrupts();
+		waitSerial();
+		myThread.enabled = true;
+
+		noInterrupts();
+		Serial.println("Type anything to enable hisThread!");
+		interrupts();
+		waitSerial();
+		hisThread.enabled = true;
+
 	}
-	delay(500);
-
-	return h;
-}
-
-float GetTemperature(bool isFahrenheit)
-{
-	float t;
-
-	if (isFahrenheit)
-	{
-		// Read temperature as Fahrenheit (isFahrenheit = true)
-		t = dht.readTemperature(isFahrenheit);
-	} else {
-		// Read temperature as Celsius (the default)
-		t = dht.readTemperature(isFahrenheit);
-	}
-
-	// Check if any reads failed and exit early (to try again).
-	if (isnan(t)) {
-		Serial.println("Failed to read from DHT sensor!");
-		return 0.0f;
-	}
-
-	return t;
-}
-
-float GetHeatIndex(bool isFahrenheit)
-{
-	  // Reading temperature or humidity takes about 250 milliseconds!
-	  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-	  float h = dht.readHumidity();
-	  // Read temperature as Celsius (the default)
-	  float t = dht.readTemperature();
-	  // Read temperature as Fahrenheit (isFahrenheit = true)
-	  float f = dht.readTemperature(true);
-
-	  // Check if any reads failed and exit early (to try again).
-	  if (isnan(h) || isnan(t) || isnan(f)) {
-	    Serial.println("Failed to read from DHT sensor!");
-	    return 0.0f;
-	  }
-
-	  // Compute heat index in Fahrenheit (the default)
-	  float hif = dht.computeHeatIndex(f, h);
-	  // Compute heat index in Celsius (isFahreheit = false)
-	  float hic = dht.computeHeatIndex(t, h, false);
-	delay(500);
-
-	return t;
 }
